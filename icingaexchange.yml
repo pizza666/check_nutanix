@@ -1,0 +1,18 @@
+name: check_nutanix
+description: "file:///README.md"
+url: "https://github.com/andristeiner/check_nutanix"
+tags: Nutanix
+vendor: Linux
+target: Operating System
+type: Plugin
+license: MIT
+releases: 
+  - 
+    name: 1.0
+    description: "Initial version"
+    files: 
+      - 
+        name: check_nutanix.rb
+        url: "file:///check_nutanix.rb"
+        description: "Initial Version"
+        checksum: 7c7aa508e243da34ea6d8fbc068f70a2
