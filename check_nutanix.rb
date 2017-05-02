@@ -46,7 +46,7 @@ class Optparse
       opts.on("--password [Password]", "-p", "your Nutanix Web Console Password, defaults to #{$password}") do |password|
         options.password = password
       end
-      opts.on("--certificate","-c","a client certificate to authenticate with Nutanix Web Console" do |certificate|
+      opts.on("--certificate","-c","a client certificate to authenticate with Nutanix Web Console") do |certificate|
         option.certificate = certificate
       end
       opts.on_tail("-h", "--help", "Show this message") do
