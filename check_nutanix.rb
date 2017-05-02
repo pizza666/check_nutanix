@@ -22,6 +22,7 @@ class Optparse
     options.port = '9440'
     options.username = 'admin'
     options.password = 'admin'
+    options.certificate = '/etc/icinga/icinga.pem'
 
     opt_parser = OptionParser.new do |opts|
       opts.banner = "Usage: #{$0} [options]"
@@ -45,6 +46,9 @@ class Optparse
       opts.on("--password [Password]", "-p", "your Nutanix Web Console Password, defaults to #{$password}") do |password|
         options.password = password
       end
+      opts.on("--certificate","-c","a client certificate to authenticate with Nutanix Web Console" do |certificate|
+        option.certificate = certificate
+      end
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
         exit 0
@@ -61,7 +65,7 @@ class NutanixAPI
   # Connect to the API
   def initialize
     puts "Connecting to https://#{$options.host}:#{$options.port}" if $verbose
-    @cert_raw = File.read("/etc/icinga/icinga.pem")
+    @cert_raw = File.read($options.certificate)
     @cert_key_raw = @cert_raw
     $https = Net::HTTP.new($options.host, $options.port)
     $https.use_ssl = true
