@@ -1,12 +1,14 @@
 #!/usr/bin/ruby
 # nagios-nutanix
 # 2014-10-29  Andri Steiner <asteiner@snowflake.ch>
+# v2 by Jan-Dirk Lehde <jan-dirk.lehde@nassmagnet.de
 
 # include modules
 require 'optparse'
 require 'ostruct'
 require 'pp'
 require 'net/https'
+require 'openssl'
 require 'json'
 
 # Option Parser
@@ -59,16 +61,21 @@ class NutanixAPI
   # Connect to the API
   def initialize
     puts "Connecting to https://#{$options.host}:#{$options.port}" if $verbose
-    $http = Net::HTTP.new($options.host, $options.port)
-    $http.use_ssl = true
+    @cert_raw = File.read("/etc/icinga/icinga.pem")
+    @cert_key_raw = @cert_raw
+    $https = Net::HTTP.new($options.host, $options.port)
+    $https.use_ssl = true
+    $https.cert = OpenSSL::X509::Certificate.new(@cert_raw)
+    $https.key = OpenSSL::PKey::RSA.new(@cert_key_raw)
+    $https.verify_mode = OpenSSL::SSL::VERIFY_PEER
   end
 
   # get Values
   def get(url)
     puts "GET from #{url}" if $verbose
     req = Net::HTTP::Get.new('/' + url)
-    req.basic_auth $options.username, $options.password
-    response = $http.request(req)
+    # req.basic_auth $options.username, $options.password
+    response = $https.request(req)
     if response.code != '200'
       puts "ERROR: API return Value " + response.code
       exit 2
@@ -84,38 +91,64 @@ $options = Optparse.parse(ARGV)
 # initialize API
 API = NutanixAPI.new
 
-# initialize return Buffers
-returnBuffer = " - "
+# initialize return Buffersi and counters
 returnValue = 0
+returnBuffer = ""
+
+counterUnknown = 0
+counterWarn = 0
+counterCrit = 0
 
 # check VM Health
 vmhealth = API.get("PrismGateway/services/rest/v1/vms/health_check_summary")
-vmCritical = vmhealth["healthSummary"]["Critical"]
-vmUnknown = vmhealth["healthSummary"]["Unknown"]
-vmGood = vmhealth["healthSummary"]["Good"]
-vmWarning = vmhealth["healthSummary"]["Warning"]
-returnBuffer << "VM Summary: #{vmGood} Good, #{vmUnknown} Unknown, #{vmWarning} Warning, #{vmCritical} Critical."
-returnValue = 3 if vmUnknown != 0
-returnValue = 1 if vmWarning != 0
-returnValue = 2 if vmCritical != 0
 
+vmCritical = vmhealth["healthSummary"]["Critical"]
+counterCrit += vmCritical
+
+vmUnknown = vmhealth["healthSummary"]["Unknown"]
+counterUnknown += vmUnknown
+
+vmGood = vmhealth["healthSummary"]["Good"]
+
+vmWarning = vmhealth["healthSummary"]["Warning"]
+counterWarn += vmWarning
+
+vmSeverity = "OK"
+vmSeverity = "UNKNOWN" if counterUnknown > 0
+vmSeverity = "WARNING" if counterWarn > 0
+vmSeverity = "CRITICAL" if counterCrit > 0
+
+returnBuffer = vmSeverity + " - VM Summary: #{vmGood} Good, #{vmUnknown} Unknown, #{vmWarning} Warning, #{vmCritical} Critical.\n"
 # check if there are any unresolved/unacknowledged Alerts
 alerts = API.get('PrismGateway/services/rest/v1/alerts/?resolved=false&acknowledged=false')
-alertCount = alerts['metadata']['totalEntities']
-returnBuffer << " #{alertCount} pending Alerts."
-returnValue = 2 if alertCount != 0
 
-# prepend Status Message
-case returnValue
-  when 0
-    returnBuffer.prepend("OK")
-  when 1
-    returnBuffer.prepend("WARNING")
-  when 2
-    returnBuffer.prepend("CRITICAL")
-  when 3
-    returnBuffer.prepend("UNKNOWN")
+# lets check all entities and its severity 
+
+counterWarn = 0
+counterCrit = 0
+
+alerts["entities"].each do |alert|
+ # display every single open alert
+ # fill contextTypes with Values in alertTitle
+ 
+ alertTitle = alert["alertTitle"]
+ alert["contextTypes"].each.with_index(0) do |contextType, index|
+    alertTitle = alertTitle.gsub('{' + contextType + '}',alert["contextValues"][index])  
+ end
+
+ returnBuffer << alert["severity"][1..-1].upcase + " - " + alertTitle + "\n"
+ case alert["severity"]
+   when "kWarning"
+     counterWarn +=1
+   when "kCritical"
+     counterCrit +=1
+ end    
 end
+
+# analyse counter and set returnValue
+returnValue = 3 if counterUnknown > 0
+returnValue = 1 if counterWarn > 0
+returnValue = 2 if counterCrit > 0
 
 puts returnBuffer
 exit returnValue
