@@ -103,6 +103,32 @@ counterUnknown = 0
 counterWarn = 0
 counterCrit = 0
 
+# check if there are any unresolved/unacknowledged Alerts
+alerts = API.get('PrismGateway/services/rest/v1/alerts/?resolved=false&acknowledged=false')
+
+counterWarn = 0
+counterCrit = 0
+
+# lets check all entities and its severity 
+# and display every single open alert
+
+alerts["entities"].each do |alert|
+  
+  # fill contextTypes with Values in alertTitle
+  alertTitle = alert["alertTitle"]
+  alert["contextTypes"].each.with_index(0) do |contextType, index|
+    alertTitle = alertTitle.gsub('{' + contextType + '}',alert["contextValues"][index])  
+  end
+
+  returnBuffer << alert["severity"][1..-1].upcase + " - " + alertTitle + "\n"
+  case alert["severity"]
+    when "kWarning"
+      counterWarn +=1
+    when "kCritical"
+      counterCrit +=1
+  end    
+end
+
 # check VM Health
 vmhealth = API.get("PrismGateway/services/rest/v1/vms/health_check_summary")
 
@@ -123,31 +149,6 @@ vmSeverity = "WARNING" if counterWarn > 0
 vmSeverity = "CRITICAL" if counterCrit > 0
 
 returnBuffer = vmSeverity + " - VM Summary: #{vmGood} Good, #{vmUnknown} Unknown, #{vmWarning} Warning, #{vmCritical} Critical.\n"
-# check if there are any unresolved/unacknowledged Alerts
-alerts = API.get('PrismGateway/services/rest/v1/alerts/?resolved=false&acknowledged=false')
-
-# lets check all entities and its severity 
-
-counterWarn = 0
-counterCrit = 0
-
-alerts["entities"].each do |alert|
- # display every single open alert
- # fill contextTypes with Values in alertTitle
- 
- alertTitle = alert["alertTitle"]
- alert["contextTypes"].each.with_index(0) do |contextType, index|
-    alertTitle = alertTitle.gsub('{' + contextType + '}',alert["contextValues"][index])  
- end
-
- returnBuffer << alert["severity"][1..-1].upcase + " - " + alertTitle + "\n"
- case alert["severity"]
-   when "kWarning"
-     counterWarn +=1
-   when "kCritical"
-     counterCrit +=1
- end    
-end
 
 # analyse counter and set returnValue
 returnValue = 3 if counterUnknown > 0
