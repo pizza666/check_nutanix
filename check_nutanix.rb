@@ -144,9 +144,9 @@ vmWarning = vmhealth["healthSummary"]["Warning"]
 counterWarn += vmWarning
 
 vmSeverity = "OK"
-vmSeverity = "UNKNOWN" if counterUnknown > 0
-vmSeverity = "WARNING" if counterWarn > 0
-vmSeverity = "CRITICAL" if counterCrit > 0
+vmSeverity = "UNKNOWN" if vmUnknown > 0
+vmSeverity = "WARNING" if vmWarning > 0
+vmSeverity = "CRITICAL" if vmCritical > 0
 
 returnBuffer = vmSeverity + " - VM Summary: #{vmGood} Good, #{vmUnknown} Unknown, #{vmWarning} Warning, #{vmCritical} Critical.\n"
 
