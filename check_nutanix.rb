@@ -148,7 +148,7 @@ vmSeverity = "UNKNOWN" if vmUnknown > 0
 vmSeverity = "WARNING" if vmWarning > 0
 vmSeverity = "CRITICAL" if vmCritical > 0
 
-returnBuffer = vmSeverity + " - VM Summary: #{vmGood} Good, #{vmUnknown} Unknown, #{vmWarning} Warning, #{vmCritical} Critical.\n"
+returnBuffer << vmSeverity + " - VM Summary: #{vmGood} Good, #{vmUnknown} Unknown, #{vmWarning} Warning, #{vmCritical} Critical.\n"
 
 # analyse counter and set returnValue
 returnValue = 3 if counterUnknown > 0
